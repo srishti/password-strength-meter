@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <script src="https://unpkg.com/react@16/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="index.css">
+
+    <title>Password Strength Meter</title>
+</head>
+
+<body>
+    <!-- container div acting as the root element and holding all children elements -->
+    <div id="root">
+        <!-- If everything goes well and there's no error, the content of this div are over-written. -->
+        <!-- If there's a problem in compiling React code, this paragraph element is shown on DOM. -->
+        <p> React code could not get rendered! </p>
+    </div>
+
+    <script type="text/babel">
+
+            // array containing the DOM ID and text to be displayed for each strength criterion
+            const strengthCriteriaArr = [
+                {
+                    domID: "checkCharLength",
+                    text: "Minimum 6 characters long"
+                },
+                {
+                    domID: "checkCapitalLetter",
+                    text: "Atleast 1 capital letter"
+                },
+                {
+                    domID: "checkSmallLetter",
+                    text: "Atleast 1 small letter"
+                },
+                {
+                    domID: "checkNumber",
+                    text: "Atleast 1 number"
+                },
+                {
+                    domID: "checkSpecialChar",
+                    text: "Atleast 1 special character"
+                }
+            ];
+
+            // stateless functional component to render the list of criteria for analyzing a strong password
+            const StrengthCriteria = function(props) {
+                return (
+                    <div>
+                    {
+                        props.strengthCriteriaArr.map((criterion) => {
+                            return <div key={criterion.domID} id={criterion.domID} className="criterion">
+                                <i className="fa fa-times" aria-hidden="true"></i>{criterion.text}
+                            </div>
+                        })
+                    }
+                    </div>
+                )
+            }
+            
+            // stateful class component rendering the entire application
+            class PasswordStrengthMeter extends React.Component {
+                constructor() {
+                    super();
+                    this.state = {
+                        password: "",
+                        criteriaSatisfiedCount: 0, // total number of criteria satisfied
+                        criteriaSatisfied: { // boolen value - TRUE meaning criterion is met; FALSE meaning otherwise
+                            charLength: false,
+                            capitalLetter: false,
+                            smallLetter: false,
+                            number: false,
+                            specialChar: false
+                        },
+                        displayUIError: false
+                    }
+                    this.onPasswordEntered = this.onPasswordEntered.bind(this);
+                    this.onPasswordChanged = this.onPasswordChanged.bind(this);
+                }
+                
+                // 'onKeyPress' event handler for password input field
+                onPasswordEntered = (event) => {
+                    let regex = new RegExp("^[a-zA-Z0-9!@#$%^&*_]+$");
+                    let key = String.fromCharCode(!event.charCode ? event.which : event.charCode);
+                    if (!regex.test(key)) {
+                        event.preventDefault();
+                        this.setState({displayUIError: true});
+                        return false;
+                    }
+                    this.setState({displayUIError: false});
+                }
+                
+                // 'onChange' event handler for password input field
+                onPasswordChanged = (event) => {
+                    let newPassword = event.target.value;
+                    this.setState({password: newPassword, criteriaSatisfiedCount: 0}, function() {
+                        this.setCriteriaSatisfied();
+                        this.calculateNumberOfCriteriaSatisfied();
+                    });
+                }
+                
+                // function to set the individual criteria satisfied in the state object 'criteriaSatisfied'
+                setCriteriaSatisfied = () => {
+                    let currentCriteriaSatisfiedCount = this.state.criteriaSatisfiedCount;
+                    
+                    // update the state for atleast six characters
+                    if (this.checkMinimumSixChars()) {
+                        this.displayCheckMarkOnCriterionSelected(strengthCriteriaArr[0].domID); // display check icon on DOM
+                        let newCriteriaSatisfied = this.state.criteriaSatisfied;
+                        newCriteriaSatisfied.charLength = true;
+                        this.setState({criteriaSatisfied: newCriteriaSatisfied});
+                    } else {
+                        this.displayCrossMarkOnCriterionNotSelected(strengthCriteriaArr[0].domID); // display cross icon on DOM
+                        let newCriteriaSatisfied = this.state.criteriaSatisfied;
+                        newCriteriaSatisfied.charLength = false;
+                        this.setState({criteriaSatisfied: newCriteriaSatisfied});
+                    }
+                    
+                    // update the state for atleast one capital letter
+                    if (this.checkOneCapitalLetter()) {
+                        this.displayCheckMarkOnCriterionSelected(strengthCriteriaArr[1].domID); // display check icon on DOM
+                        let newCriteriaSatisfied = this.state.criteriaSatisfied;
+                        newCriteriaSatisfied.capitalLetter = true;
+                        this.setState({criteriaSatisfied: newCriteriaSatisfied});
+                    } else {
+                        this.displayCrossMarkOnCriterionNotSelected(strengthCriteriaArr[1].domID); // display cross icon on DOM
+                        let newCriteriaSatisfied = this.state.criteriaSatisfied;
+                        newCriteriaSatisfied.capitalLetter = false;
+                        this.setState({criteriaSatisfied: newCriteriaSatisfied});
+                    }
+
+                    // update the state for atleast one small letter
+                    if (this.checkOneSmallLetter()) {
+                        this.displayCheckMarkOnCriterionSelected(strengthCriteriaArr[2].domID); // display check icon on DOM
+                        let newCriteriaSatisfied = this.state.criteriaSatisfied;
+                        newCriteriaSatisfied.smallLetter = true;
+                        this.setState({criteriaSatisfied: newCriteriaSatisfied});
+                    } else {
+                        this.displayCrossMarkOnCriterionNotSelected(strengthCriteriaArr[2].domID); // display cross icon on DOM
+                        let newCriteriaSatisfied = this.state.criteriaSatisfied;
+                        newCriteriaSatisfied.smallLetter = false;
+                        this.setState({criteriaSatisfied: newCriteriaSatisfied});
+                    }
+                    
+                    // update the state for atleast one number
+                    if (this.checkOneNumber()) {
+                        this.displayCheckMarkOnCriterionSelected(strengthCriteriaArr[3].domID); // display check icon on DOM
+                        let newCriteriaSatisfied = this.state.criteriaSatisfied;
+                        newCriteriaSatisfied.number = true;
+                        this.setState({criteriaSatisfied: newCriteriaSatisfied});
+                        
+                    } else {
+                        this.displayCrossMarkOnCriterionNotSelected(strengthCriteriaArr[3].domID); // display cross icon on DOM
+                        let newCriteriaSatisfied = this.state.criteriaSatisfied;
+                        newCriteriaSatisfied.number = false;
+                        this.setState({criteriaSatisfied: newCriteriaSatisfied});
+                    }
+                    
+                    // update the state for atleast one special character
+                    if (this.checkOneSpecialCharacter()) {
+                        this.displayCheckMarkOnCriterionSelected(strengthCriteriaArr[4].domID); // display check icon on DOM
+                        let newCriteriaSatisfied = this.state.criteriaSatisfied;
+                        newCriteriaSatisfied.specialChar = true;
+                        this.setState({criteriaSatisfied: newCriteriaSatisfied});
+                        
+                    } else {
+                        this.displayCrossMarkOnCriterionNotSelected(strengthCriteriaArr[4].domID); // display cross icon on DOM
+                        let newCriteriaSatisfied = this.state.criteriaSatisfied;
+                        newCriteriaSatisfied.specialChar = false;
+                        this.setState({criteriaSatisfied: newCriteriaSatisfied});
+                    }
+                }
+                
+                // function to check if the current password is of minimum six characters in length
+                checkMinimumSixChars = () => {
+                    if (this.state.password.length >= 6) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+                
+                // function to check if the current password has atleast one capital letter
+                checkOneCapitalLetter = () => {
+                    if (/[A-Z]/.test(this.state.password)) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+
+                // function to check if the current password has atleast one small letter
+                checkOneSmallLetter = () => {
+                    if (/[a-z]/.test(this.state.password)) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+                
+                // function to check if the current password has atleast one number
+                checkOneNumber = () => {
+                    if (/[0-9]/.test(this.state.password)) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+                
+                // function to check if the current password has atleast one special letter
+                checkOneSpecialCharacter = () => {
+                    if (/[!@#$%^&*_]/.test(this.state.password)) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+                
+                // function to display a green-colored check mark on the UI for the criterion which is met
+                displayCheckMarkOnCriterionSelected = (id) => {
+                    document.getElementById(id).children[0].className = 'fa fa-check';
+                    document.getElementById(id).style.color = '#228b22';
+                }
+
+                 // function to display a grey-colored cross mark on the UI for the criterion which is not met
+                 displayCrossMarkOnCriterionNotSelected = (id) => {
+                    document.getElementById(id).children[0].className = 'fa fa-times';
+                    document.getElementById(id).style.color = '#aaa';
+                }
+                
+                // function to calculate the number of criteria met by the input password
+                calculateNumberOfCriteriaSatisfied = () => {
+                    let currentCriteriaSatisfiedCount = this.state.criteriaSatisfiedCount;
+                    Object.keys(this.state.criteriaSatisfied).forEach(function(criterion) {
+                        if (this.state.criteriaSatisfied[criterion]) {
+                            currentCriteriaSatisfiedCount++;
+                        }
+                    }, this);
+
+                    this.setState({criteriaSatisfiedCount: currentCriteriaSatisfiedCount}, function() {
+                        this.updateProgressBar();
+                    });
+                }
+
+                // function to update the progress bar on the UI on the basis of the number of criteria satisfied
+                updateProgressBar = () => {
+                    document.getElementById('progressBar').value = (this.state.criteriaSatisfiedCount/5)*100;
+                    this.displayProgressStatus();
+                }
+
+                // function to display progress status on the UI on the basis of the number of criteria satisfied
+                displayProgressStatus = () => {
+                    let textVal = "";
+                    switch(this.state.criteriaSatisfiedCount) { // based on the state variable 'criteriaSatisfiedCount'
+                        case 0:
+                        case 1:
+                        default:
+                            textVal = 'Very Weak';
+                            break;
+                        case 2:
+                        case 3:
+                            textVal = 'Weak';
+                            break;
+                        case 4:
+                            textVal = 'Strong';
+                            break;
+                        case 5:
+                            textVal = 'Very Strong';
+                            break;
+                    }
+                    document.getElementById('progressStatus').innerText = textVal; // update status on DOM
+                }
+
+                render() {
+                    return(
+                        <div className='main-container'>
+                            <div className='header-container'>
+                                <h2 className='heading'>Password Strength Meter</h2>
+                            </div>
+                            <div className='password-container'>
+                                <input id='password' type='password' placeholder='Type your password here' value={this.state.password} onKeyPress={this.onPasswordEntered} onChange={this.onPasswordChanged}/>
+                            </div>
+                            {
+                                this.state.displayUIError ? 
+                                <div className="ui-error">
+                                    Only alpha-numeric characters and special characters amongst !@#$%^&*_ are allowed.
+                                </div>
+                                : ""
+                            }
+                            <div className='progressBar-container'>
+                                <progress id='progressBar' max='100' value='0'></progress>
+                                <span id='progressStatus'>Very Weak</span>
+                            </div>
+                            <div className='criteria-container'>
+                                <StrengthCriteria strengthCriteriaArr={strengthCriteriaArr} />
+                            </div>
+                        </div>
+                    )
+                }
+            }
+
+            // rendering the component on DOM
+            ReactDOM.render(
+                <PasswordStrengthMeter />,
+                document.getElementById('root')
+            );
+            
+        </script>
+</body>
+
+</html>
